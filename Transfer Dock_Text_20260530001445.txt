@@ -1,0 +1,609 @@
+```html
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>أداة إثراء بيانات المنتجات | AI Product Enricher</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#1e40af',
+                        accent: '#10b981'
+                    },
+                    fontFamily: {
+                        sans: ['Tajawal', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts (Tajawal) -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- SheetJS for Excel Processing -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        body { font-family: 'Tajawal', sans-serif; background-color: #f8fafc; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+        .drag-active { border-color: #3b82f6; background-color: #eff6ff; }
+        .loader-dots div { animation-timing-function: cubic-bezier(0, 1, 1, 0); }
+        .loader-dots div:nth-child(1) { left: 8px; animation: loader-dots1 0.6s infinite; }
+        .loader-dots div:nth-child(2) { left: 8px; animation: loader-dots2 0.6s infinite; }
+        .loader-dots div:nth-child(3) { left: 32px; animation: loader-dots2 0.6s infinite; }
+        .loader-dots div:nth-child(4) { left: 56px; animation: loader-dots3 0.6s infinite; }
+        @keyframes loader-dots1 { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+        @keyframes loader-dots3 { 0% { transform: scale(1); } 100% { transform: scale(0); } }
+        @keyframes loader-dots2 { 0% { transform: translate(0, 0); } 100% { transform: translate(24px, 0); } }
+        
+        .table-container::-webkit-scrollbar { height: 8px; width: 8px; }
+        .table-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .table-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .table-container::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white shadow-lg">
+                    <i class="fa-solid fa-wand-magic-sparkles text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-2xl text-slate-900 leading-tight">إثراء المنتجات <span class="text-primary">بالذكاء الاصطناعي</span></h1>
+                    <p class="text-xs text-slate-500 font-medium">استخراج آلي للوصف، المادة الفعالة، والتصنيف</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <!-- API Key Input Section -->
+                <div class="relative hidden sm:block">
+                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <i class="fa-solid fa-key text-slate-400"></i>
+                    </div>
+                    <input type="password" id="apiKeyInput" placeholder="أدخل مفتاح Gemini API هنا" class="bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-primary focus:border-primary block w-64 pr-10 p-2.5 outline-none transition-all focus:bg-white" title="يتم حفظ المفتاح في متصفحك بشكل آمن">
+                </div>
+                <span class="text-sm text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full hidden md:inline-flex"><i class="fa-solid fa-shield-halved text-accent ml-1"></i> آمن ومحلي</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        <!-- Mobile API Key Input -->
+        <div class="sm:hidden mb-4">
+            <label class="block text-sm font-medium text-slate-700 mb-1">مفتاح API الخاص بك:</label>
+            <input type="password" id="apiKeyInputMobile" placeholder="أدخل مفتاح Gemini API" class="w-full bg-slate-50 border border-slate-300 text-slate-900 text-sm rounded-lg focus:ring-primary focus:border-primary block p-2.5 outline-none">
+        </div>
+
+        <!-- Upload Section -->
+        <section id="uploadSection" class="glass-panel rounded-2xl p-8 transition-all duration-300">
+            <div class="text-center mb-8">
+                <h2 class="text-xl font-bold text-slate-800 mb-2">خطوة 1: ارفع ملف الإكسيل (Excel)</h2>
+                <p class="text-slate-500 text-sm">يجب أن يحتوي الملف على عمود يحمل اسم <strong class="text-primary">"اسم المنتج"</strong> أو أن يكون العمود الأول هو اسم المنتج.</p>
+            </div>
+
+            <div id="dropzone" class="border-2 border-dashed border-slate-300 rounded-xl p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary hover:bg-blue-50/50 transition-all duration-300 relative group">
+                <input type="file" id="fileInput" accept=".xlsx, .xls" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                <div class="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center mb-4 text-primary group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                    <i class="fa-solid fa-file-excel text-3xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-700 mb-1">اسحب وأفلت الملف هنا</h3>
+                <p class="text-slate-500 text-sm mb-4">أو اضغط لاختيار ملف من جهازك</p>
+                <span class="bg-white border border-slate-200 text-slate-600 text-xs px-4 py-2 rounded-lg font-medium shadow-sm">يدعم صيغ: .xlsx, .xls</span>
+            </div>
+        </section>
+
+        <!-- Processing Status Section -->
+        <section id="statusSection" class="hidden glass-panel rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div id="statusIcon" class="w-10 h-10 rounded-full bg-blue-100 text-primary flex items-center justify-center">
+                        <i class="fa-solid fa-robot fa-bounce"></i>
+                    </div>
+                    <div>
+                        <h3 id="statusTitle" class="font-bold text-lg text-slate-800">جاري تحليل البيانات...</h3>
+                        <p id="statusSubtitle" class="text-sm text-slate-500">يقوم الذكاء الاصطناعي الآن بجمع المعلومات لكل منتج.</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-2xl font-black text-primary"><span id="processedCount">0</span> / <span id="totalCount">0</span></div>
+                    <div class="text-xs text-slate-500 font-medium">منتج مكتمل</div>
+                </div>
+            </div>
+            
+            <div class="w-full bg-slate-100 rounded-full h-3 mb-2 overflow-hidden border border-slate-200">
+                <div id="progressBar" class="bg-gradient-to-r from-primary to-accent h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div class="flex justify-between text-xs text-slate-400 font-medium">
+                <span>البداية</span>
+                <span id="progressPercentage">0%</span>
+            </div>
+        </section>
+
+        <!-- Results Table Section -->
+        <section id="resultsSection" class="hidden glass-panel rounded-2xl overflow-hidden shadow-lg border border-slate-200 flex flex-col">
+            <div class="bg-slate-50 border-b border-slate-200 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-table-list text-primary ml-2"></i> النتائج المستخرجة</h2>
+                <div class="flex gap-3">
+                    <button id="resetBtn" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors text-sm font-medium flex items-center gap-2 shadow-sm">
+                        <i class="fa-solid fa-arrow-rotate-right"></i> رفع ملف آخر
+                    </button>
+                    <button id="exportBtn" disabled class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-secondary transition-colors text-sm font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-blue-500/30">
+                        <i class="fa-solid fa-download"></i> تصدير Excel
+                    </button>
+                </div>
+            </div>
+            
+            <div class="table-container overflow-x-auto">
+                <table class="w-full text-sm text-right text-slate-600">
+                    <thead class="text-xs text-slate-700 uppercase bg-slate-100/80 sticky top-0 border-b border-slate-200 z-10">
+                        <tr>
+                            <th scope="col" class="px-6 py-4 font-bold w-12 text-center">#</th>
+                            <th scope="col" class="px-6 py-4 font-bold w-16 text-center">الصورة</th>
+                            <th scope="col" class="px-6 py-4 font-bold w-48">اسم المنتج</th>
+                            <th scope="col" class="px-6 py-4 font-bold min-w-[300px]">الوصف الاحترافي</th>
+                            <th scope="col" class="px-6 py-4 font-bold w-40">المادة الفعالة</th>
+                            <th scope="col" class="px-6 py-4 font-bold w-32">التصنيف</th>
+                            <th scope="col" class="px-6 py-4 font-bold w-24 text-center">الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody" class="divide-y divide-slate-100 bg-white">
+                        <!-- Rows -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Global Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl font-medium text-sm">
+        <i id="toastIcon" class="fa-solid"></i>
+        <span id="toastMsg"></span>
+    </div>
+
+    <!-- Script / Logic -->
+    <script>
+        // API Key Management
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const apiKeyInputMobile = document.getElementById('apiKeyInputMobile');
+        
+        // Load saved key
+        const savedKey = localStorage.getItem('geminiApiKey');
+        if (savedKey) {
+            apiKeyInput.value = savedKey;
+            if(apiKeyInputMobile) apiKeyInputMobile.value = savedKey;
+        }
+
+        function getApiKey() {
+            let key = apiKeyInput.value.trim() || (apiKeyInputMobile ? apiKeyInputMobile.value.trim() : '');
+            if (!key && typeof window.__initial_auth_token !== 'undefined') {
+                 key = ""; 
+            }
+            if (key) localStorage.setItem('geminiApiKey', key);
+            return key;
+        }
+
+        apiKeyInput.addEventListener('input', (e) => { if(apiKeyInputMobile) apiKeyInputMobile.value = e.target.value.trim(); localStorage.setItem('geminiApiKey', e.target.value.trim()); });
+        if(apiKeyInputMobile) {
+            apiKeyInputMobile.addEventListener('input', (e) => { apiKeyInput.value = e.target.value.trim(); localStorage.setItem('geminiApiKey', e.target.value.trim()); });
+        }
+
+        // State variables
+        let extractedDataList = [];
+        let totalItems = 0;
+        let processedItems = 0;
+        let isProcessing = false;
+
+        // DOM Elements
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const uploadSection = document.getElementById('uploadSection');
+        
+        const statusSection = document.getElementById('statusSection');
+        const progressBar = document.getElementById('progressBar');
+        const progressPercentage = document.getElementById('progressPercentage');
+        const processedCount = document.getElementById('processedCount');
+        const totalCount = document.getElementById('totalCount');
+        const statusIcon = document.getElementById('statusIcon');
+        const statusTitle = document.getElementById('statusTitle');
+        const statusSubtitle = document.getElementById('statusSubtitle');
+        
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsTableBody = document.getElementById('resultsTableBody');
+        const exportBtn = document.getElementById('exportBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        // Drag & Drop Handlers
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => dropzone.addEventListener(eventName, preventDefaults, false));
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+        ['dragenter', 'dragover'].forEach(eventName => dropzone.addEventListener(eventName, () => dropzone.classList.add('drag-active'), false));
+        ['dragleave', 'drop'].forEach(eventName => dropzone.addEventListener(eventName, () => dropzone.classList.remove('drag-active'), false));
+
+        dropzone.addEventListener('drop', (e) => {
+            if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files[0]);
+        }, false);
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFiles(e.target.files[0]);
+        }, false);
+        
+        exportBtn.addEventListener('click', exportToExcel, false);
+        resetBtn.addEventListener('click', resetApp, false);
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toastIcon');
+            const toastMsg = document.getElementById('toastMsg');
+            
+            toast.className = 'fixed bottom-5 right-5 transform transition-all duration-300 z-50 flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl font-medium text-sm text-white';
+            toastIcon.className = 'fa-solid text-lg';
+            
+            if (type === 'success') { toast.classList.add('bg-emerald-500'); toastIcon.classList.add('fa-circle-check'); } 
+            else if (type === 'error') { toast.classList.add('bg-rose-500'); toastIcon.classList.add('fa-circle-exclamation'); } 
+            else if (type === 'warning') { toast.classList.add('bg-amber-500'); toastIcon.classList.add('fa-triangle-exclamation'); }
+
+            toastMsg.textContent = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 4000);
+        }
+
+        function handleFiles(file) {
+            if (isProcessing) return;
+            const currentApiKey = getApiKey();
+            if (!currentApiKey && currentApiKey !== "") { 
+                showToast('الرجاء إدخال مفتاح Gemini API في الأعلى للبدء.', 'error');
+                apiKeyInput.classList.add('animate-pulse', 'border-rose-500');
+                setTimeout(() => apiKeyInput.classList.remove('animate-pulse', 'border-rose-500'), 2000);
+                return;
+            }
+            
+            if (!file.name.match(/\.(xlsx|xls)$/i)) {
+                showToast('عذراً، يرجى رفع ملف إكسيل صالح (.xlsx أو .xls)', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheetName = workbook.SheetNames[0];
+                    const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName], {header: 1}); 
+                    extractProductNames(jsonData);
+                } catch (error) {
+                    console.error(error);
+                    showToast('حدث خطأ أثناء قراءة الملف. تأكد من سلامته.', 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function extractProductNames(data) {
+            if (!data || data.length < 2) {
+                showToast('الملف فارغ أو لا يحتوي على بيانات كافية.', 'error');
+                return;
+            }
+
+            const headers = data[0].map(h => String(h).trim().toLowerCase());
+            let productColIndex = headers.findIndex(h => h.includes('اسم المنتج') || h.includes('product') || h.includes('الاسم') || h.includes('name'));
+            
+            if (productColIndex === -1) {
+                productColIndex = 0; 
+                showToast('لم نجد عمود "اسم المنتج"، تم اعتماد العمود الأول.', 'warning');
+            }
+
+            const productNames = [];
+            for (let i = 1; i < data.length; i++) {
+                if (data[i] && data[i][productColIndex]) {
+                    const name = String(data[i][productColIndex]).trim();
+                    if (name) productNames.push(name);
+                }
+            }
+
+            if (productNames.length === 0) {
+                showToast('لم يتم العثور على أي أسماء منتجات في الملف.', 'error');
+                return;
+            }
+
+            startProcessing(productNames);
+        }
+
+        async function startProcessing(productNames) {
+            isProcessing = true;
+            totalItems = productNames.length;
+            processedItems = 0;
+            extractedDataList = [];
+
+            uploadSection.classList.add('hidden');
+            statusSection.classList.remove('hidden');
+            resultsSection.classList.remove('hidden');
+            resultsTableBody.innerHTML = '';
+            totalCount.textContent = totalItems;
+            exportBtn.disabled = true;
+            resetBtn.disabled = true;
+
+            statusIcon.innerHTML = '<i class="fa-solid fa-robot fa-bounce"></i>';
+            statusTitle.textContent = 'جاري تحليل البيانات...';
+            statusSubtitle.textContent = 'الذكاء الاصطناعي يعمل الآن على استخراج التفاصيل.';
+
+            productNames.forEach((name, index) => {
+                const tr = document.createElement('tr');
+                tr.id = `row-${index}`;
+                tr.className = 'hover:bg-slate-50/50 transition-colors';
+                tr.innerHTML = `
+                    <td class="px-6 py-4 text-center font-medium">${index + 1}</td>
+                    <td class="px-6 py-4 text-center">
+                        <div class="w-12 h-12 bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center text-slate-300">
+                            <i class="fa-regular fa-image"></i>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 font-bold text-slate-800">${name}</td>
+                    <td class="px-6 py-4 text-slate-400 text-xs" colspan="3">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-circle-notch fa-spin text-primary"></i> قيد الانتظار...
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500">انتظار</span>
+                    </td>
+                `;
+                resultsTableBody.appendChild(tr);
+            });
+
+            for (let i = 0; i < productNames.length; i++) {
+                await processSingleProduct(productNames[i], i);
+                updateProgress();
+            }
+
+            isProcessing = false;
+            exportBtn.disabled = false;
+            resetBtn.disabled = false;
+            statusIcon.innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i>';
+            statusIcon.className = 'w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center';
+            statusTitle.textContent = 'اكتملت العملية بنجاح!';
+            statusSubtitle.textContent = `تم معالجة وإثراء ${totalItems} منتج. يمكنك تصدير الملف الآن.`;
+            showToast('تمت المعالجة بنجاح.', 'success');
+        }
+
+        function updateProgress() {
+            processedCount.textContent = processedItems;
+            const percentage = Math.round((processedItems / totalItems) * 100);
+            progressBar.style.width = `${percentage}%`;
+            progressPercentage.textContent = `${percentage}%`;
+        }
+
+        async function fetchWithRetry(payload, retries = 3) {
+            const currentKey = getApiKey();
+            // نظام ذكي للتبديل بين النماذج:
+            // - gemini-2.5-flash-preview-09-2025: يعمل حصرياً داخل بيئة المعاينة
+            // - gemini-1.5-flash: يعمل عند استضافة الكود على GitHub باستخدام مفتاحك الشخصي
+            const modelsToTry = ['gemini-2.5-flash-preview-09-2025', 'gemini-1.5-flash'];
+            const delays = [1000, 3000, 6000];
+            let lastError = null;
+
+            for (let i = 0; i < retries; i++) {
+                for (const model of modelsToTry) {
+                    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentKey}`;
+                    try {
+                        const response = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) {
+                            let errorDetails = "";
+                            try {
+                                const errJson = await response.json();
+                                errorDetails = errJson.error?.message || "خطأ غير معروف";
+                            } catch(e) {
+                                errorDetails = `HTTP ${response.status} - خطأ في الاتصال بالخادم`;
+                            }
+                            
+                            if (response.status === 400 && errorDetails.toLowerCase().includes('api key')) {
+                                 throw new Error(`مفتاح API غير صالح: ${errorDetails}`);
+                            }
+                            if (response.status === 403) throw new Error(`تم رفض الوصول: ${errorDetails}`);
+                            
+                            // إذا كان النموذج غير متاح لهذا المفتاح/الحساب، نتخطاه ونجرب النموذج التالي فوراً
+                            if (response.status === 404 || errorDetails.includes('not found') || errorDetails.includes('is not supported')) {
+                                lastError = new Error(`النموذج ${model} غير مدعوم`);
+                                continue; 
+                            }
+                            
+                            throw new Error(errorDetails);
+                        }
+
+                        const result = await response.json();
+                        const textContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (!textContent) throw new Error("استجابة فارغة من الذكاء الاصطناعي");
+                        
+                        try {
+                            return JSON.parse(textContent);
+                        } catch (parseError) {
+                            const cleaned = textContent.replace(/```json/g, '').replace(/```/g, '').trim();
+                            return JSON.parse(cleaned);
+                        }
+
+                    } catch (err) {
+                        lastError = err;
+                        if (err.message.includes('مفتاح API') || err.message.includes('تم رفض الوصول')) {
+                            throw err; // توقف فوري إذا كانت المشكلة في صلاحيات المفتاح
+                        }
+                        if (err.message.includes('غير مدعوم')) {
+                            continue; // جرب النموذج التالي في القائمة إذا كان الحالي غير موجود
+                        }
+                        break; // لأخطاء الشبكة العامة، نكسر حلقة النماذج وننتظر قبل المحاولة مجدداً
+                    }
+                }
+                
+                if (i < retries - 1) {
+                    await new Promise(res => setTimeout(res, delays[i]));
+                }
+            }
+            throw lastError; // إرجاع آخر خطأ إذا فشلت كل المحاولات
+        }
+
+        async function processSingleProduct(productName, rowIndex) {
+            const tr = document.getElementById(`row-${rowIndex}`);
+            
+            tr.cells[3].innerHTML = `
+                <div class="flex items-center gap-2 text-primary font-medium text-xs">
+                    <div class="loader-dots relative w-[40px] h-[13px] inline-block scale-50 transform origin-left">
+                        <div class="absolute top-0 w-[13px] h-[13px] rounded-full bg-primary"></div><div class="absolute top-0 w-[13px] h-[13px] rounded-full bg-primary"></div><div class="absolute top-0 w-[13px] h-[13px] rounded-full bg-primary"></div><div class="absolute top-0 w-[13px] h-[13px] rounded-full bg-primary"></div>
+                    </div>
+                    جاري الاستخراج...
+                </div>
+            `;
+            tr.cells[4].innerHTML = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium bg-blue-50 text-blue-600"><i class="fa-solid fa-rotate fa-spin"></i> يعالج</span>`;
+
+            // Prompt تم تحسينه وإزالة التوليد المباشر للصور لمنع الأخطاء
+            const prompt = `أنت خبير بيانات منتجات. قم بتحليل المنتج التالي: "${productName}".
+يجب أن ترجع النتيجة كـ JSON بناءً على الهيكلية المطلوبة.
+بالنسبة لرابط الصورة (imageUrl): اكتب دائماً القيمة "لا يوجد". سيقوم النظام بتوفير زر بحث آلي للمستخدم.`;
+
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                // تمت إزالة google_search لأن بعض الحسابات لا تدعمها وتسبب خطأ
+                generationConfig: {
+                    temperature: 0.1, 
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            description: { type: "STRING", description: "وصف تسويقي وعلمي دقيق للمنتج (سطرين)" },
+                            activeIngredient: { type: "STRING", description: "المادة الفعالة. إذا لم يوجد اكتب 'مكون طبيعي' أو 'لا ينطبق'" },
+                            mainCategory: { type: "STRING", description: "التصنيف الرئيسي (مثال: أدوية، مكملات، عناية)" },
+                            subCategory: { type: "STRING", description: "التصنيف الفرعي (مثال: مسكن، فيتامين)" },
+                            imageUrl: { type: "STRING", description: "اكتب دائما كلمة: لا يوجد" }
+                        },
+                        required: ["description", "activeIngredient", "mainCategory", "subCategory", "imageUrl"]
+                    }
+                }
+            };
+
+            try {
+                const aiResult = await fetchWithRetry(payload);
+                
+                const enrichedItem = {
+                    'اسم المنتج': productName,
+                    'الوصف': aiResult.description || 'لا يوجد وصف',
+                    'المادة الفعالة': aiResult.activeIngredient || '-',
+                    'التصنيف الرئيسي': aiResult.mainCategory || '-',
+                    'التصنيف الفرعي': aiResult.subCategory || '-',
+                    'رابط الصورة': ''
+                };
+                
+                const searchUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(productName)}`;
+                enrichedItem['رابط الصورة'] = searchUrl; // دائماً نضع رابط بحث جوجل المضمون للصور
+                extractedDataList.push(enrichedItem);
+                
+                let imgHtml = `<div class="w-12 h-12 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-center overflow-hidden hover:border-primary transition-colors">
+                                  <a href="${searchUrl}" target="_blank" class="flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-primary cursor-pointer">
+                                      <i class="fa-solid fa-image text-lg"></i><span class="text-[8px] font-bold mt-0.5">بحث</span>
+                                  </a>
+                               </div>`;
+                
+                tr.innerHTML = `
+                    <td class="px-6 py-4 text-center font-medium">${rowIndex + 1}</td>
+                    <td class="px-6 py-4 text-center">${imgHtml}</td>
+                    <td class="px-6 py-4 font-bold text-slate-800">${productName}</td>
+                    <td class="px-6 py-4 text-slate-600 leading-relaxed text-xs max-w-xs whitespace-normal">${enrichedItem['الوصف']}</td>
+                    <td class="px-6 py-4">
+                        <span class="inline-block bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-md px-2 py-1 text-[10px] font-bold whitespace-normal">
+                            ${enrichedItem['المادة الفعالة']}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-slate-700 font-medium text-[10px]">
+                        <div class="mb-1 text-primary"><i class="fa-solid fa-folder-open text-[10px]"></i> ${enrichedItem['التصنيف الرئيسي']}</div>
+                        <div class="text-accent"><i class="fa-solid fa-tag text-[10px]"></i> ${enrichedItem['التصنيف الفرعي']}</div>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm text-[10px] font-bold">
+                            <i class="fa-solid fa-check"></i> مكتمل
+                        </span>
+                    </td>
+                `;
+
+            } catch (error) {
+                // الكشف الذكي عن نوع الخطأ لعرضه للمستخدم بوضوح
+                let errorDisplay = error.message;
+                
+                extractedDataList.push({
+                    'اسم المنتج': productName, 'الوصف': errorDisplay, 'المادة الفعالة': '-', 'التصنيف الرئيسي': '-', 'التصنيف الفرعي': '-', 'رابط الصورة': ''
+                });
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 text-center font-medium">${rowIndex + 1}</td>
+                    <td class="px-6 py-4 text-center">
+                        <div class="w-12 h-12 bg-rose-50 border border-rose-100 rounded-lg flex items-center justify-center text-rose-300">
+                            <i class="fa-solid fa-xmark"></i>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 font-bold text-slate-800">${productName}</td>
+                    <td class="px-6 py-4 text-rose-500 text-xs font-medium" colspan="3"><i class="fa-solid fa-triangle-exclamation"></i> ${errorDisplay}</td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded bg-rose-50 text-rose-600 border border-rose-100 text-[10px] font-bold">
+                            فشل
+                        </span>
+                    </td>
+                `;
+            }
+
+            processedItems++;
+        }
+
+        function exportToExcel() {
+            if (extractedDataList.length === 0) return;
+            try {
+                const ws = XLSX.utils.json_to_sheet(extractedDataList);
+                ws['!autofilter'] = { ref: XLSX.utils.encode_range(XLSX.utils.decode_range(ws['!ref'])) };
+                ws['!cols'] = [ { wch: 30 }, { wch: 80 }, { wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 60 } ];
+
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "البيانات المثراة");
+
+                XLSX.writeFile(wb, "المنتجات_المثراة_AI.xlsx");
+                showToast('تم تصدير ملف الإكسيل بنجاح!', 'success');
+            } catch (error) {
+                showToast('حدث خطأ أثناء التصدير.', 'error');
+            }
+        }
+
+        function resetApp() {
+            uploadSection.classList.remove('hidden');
+            statusSection.classList.add('hidden');
+            resultsSection.classList.add('hidden');
+            fileInput.value = '';
+            extractedDataList = [];
+            totalItems = 0;
+            processedItems = 0;
+            statusIcon.className = 'w-10 h-10 rounded-full bg-blue-100 text-primary flex items-center justify-center';
+        }
+    </script>
+</body>
+</html>
+
+
+
+```
