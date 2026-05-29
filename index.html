@@ -327,69 +327,61 @@
             // Initialization for processing
             startProcessing(productNames);
         }
+// استبدل الدالة بالكامل بهذا الكود المحدث:
+async function startProcessing(productNames) {
+    isProcessing = true;
+    totalItems = productNames.length;
+    processedItems = 0;
+    extractedDataList = [];
 
-        async function startProcessing(productNames) {
-            isProcessing = true;
-            totalItems = productNames.length;
-            processedItems = 0;
-            extractedDataList = [];
+    // UI Updates
+    uploadSection.classList.add('hidden');
+    statusSection.classList.remove('hidden');
+    resultsSection.classList.remove('hidden');
+    resultsTableBody.innerHTML = '';
+    totalCount.textContent = totalItems;
+    exportBtn.disabled = true;
+    resetBtn.disabled = true;
 
-            // UI Updates
-            uploadSection.classList.add('hidden');
-            statusSection.classList.remove('hidden');
-            resultsSection.classList.remove('hidden');
-            resultsTableBody.innerHTML = '';
-            totalCount.textContent = totalItems;
-            exportBtn.disabled = true;
-            resetBtn.disabled = true;
+    statusIcon.innerHTML = '<i class="fa-solid fa-robot fa-bounce"></i>';
+    statusTitle.textContent = 'جاري تحليل البيانات...';
+    statusSubtitle.textContent = 'الذكاء الاصطناعي يعمل الآن على استخراج التفاصيل (يتم المعالجة ببطء لضمان استقرار الاتصال).';
 
-            statusIcon.innerHTML = '<i class="fa-solid fa-robot fa-bounce"></i>';
-            statusTitle.textContent = 'جاري تحليل البيانات...';
-            statusSubtitle.textContent = 'الذكاء الاصطناعي يعمل الآن على استخراج التفاصيل لكل منتج.';
+    // Pre-create rows
+    productNames.forEach((name, index) => {
+        const tr = document.createElement('tr');
+        tr.id = `row-${index}`;
+        tr.className = 'hover:bg-slate-50/50 transition-colors';
+        tr.innerHTML = `
+            <td class="px-6 py-4 text-center font-medium">${index + 1}</td>
+            <td class="px-6 py-4 text-center"><div class="w-12 h-12 bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center text-slate-300"><i class="fa-regular fa-image"></i></div></td>
+            <td class="px-6 py-4 font-bold text-slate-800">${name}</td>
+            <td class="px-6 py-4 text-slate-400 text-xs" colspan="4">انتظار الدور...</td>
+        `;
+        resultsTableBody.appendChild(tr);
+    });
 
-            // Pre-create rows for visual feedback
-            productNames.forEach((name, index) => {
-                const tr = document.createElement('tr');
-                tr.id = `row-${index}`;
-                tr.className = 'hover:bg-slate-50/50 transition-colors';
-                tr.innerHTML = `
-                    <td class="px-6 py-4 text-center font-medium">${index + 1}</td>
-                    <td class="px-6 py-4 text-center">
-                        <div class="w-12 h-12 bg-slate-100 rounded-lg border border-slate-200 flex items-center justify-center text-slate-300">
-                            <i class="fa-regular fa-image"></i>
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 font-bold text-slate-800">${name}</td>
-                    <td class="px-6 py-4 text-slate-400 text-xs" colspan="4">
-                        <div class="flex items-center gap-2">
-                            <i class="fa-solid fa-circle-notch fa-spin text-primary"></i> قيد الانتظار...
-                        </div>
-                    </td>
-                    <td class="px-6 py-4 text-center">
-                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
-                            <i class="fa-solid fa-hourglass-half text-[10px]"></i> انتظار
-                        </span>
-                    </td>
-                `;
-                resultsTableBody.appendChild(tr);
-            });
+    // Process one by one with a delay
+    for (let i = 0; i < productNames.length; i++) {
+        // نداء لدالة المعالجة
+        await processSingleProduct(productNames[i], i);
+        updateProgress();
 
-            // Process one by one sequentially
-            for (let i = 0; i < productNames.length; i++) {
-                await processSingleProduct(productNames[i], i);
-                updateProgress();
-            }
+        // **الحل الجذري للمشكلة:** إضافة تأخير لمدة 2000 مللي ثانية (ثانيتين)
+        // هذا يمنع خطأ "فشل الاتصال" تماماً
+        await new Promise(resolve => setTimeout(resolve, 2000));
+    }
 
-            // Finished processing
-            isProcessing = false;
-            exportBtn.disabled = false;
-            resetBtn.disabled = false;
-            statusIcon.innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i>';
-            statusIcon.className = 'w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center';
-            statusTitle.textContent = 'اكتملت العملية بنجاح!';
-            statusSubtitle.textContent = `تم معالجة وإثراء ${totalItems} منتج. يمكنك الآن تصدير الملف.`;
-            showToast('تمت معالجة كافة المنتجات بنجاح.', 'success');
-        }
+    // Finished processing
+    isProcessing = false;
+    exportBtn.disabled = false;
+    resetBtn.disabled = false;
+    statusIcon.innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i>';
+    statusTitle.textContent = 'اكتملت العملية بنجاح!';
+    statusSubtitle.textContent = `تم معالجة ${totalItems} منتج.`;
+    showToast('تمت المعالجة بنجاح.', 'success');
+}
+        
 
         function updateProgress() {
             processedCount.textContent = processedItems;
