@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>التقرير الشهري لأداء الصيدلية</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- خطوط عربية احترافية -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { 
+            font-family: 'Tajawal', sans-serif; 
+            background-color: #f8fafc; 
+            color: #0f172a; 
+        }
+        
+        /* تأثير الزجاج والخلفيات للشاشة */
+        .glass-panel { 
+            background: #ffffff; 
+            border: 1px solid #e2e8f0; 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); 
+        }
+        
+        /* تنسيق حقول الإدخال */
+        .input-field { 
+            width: 100%; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 0.5rem; 
+            padding: 0.625rem 1rem; 
+            background-color: #f8fafc; 
+            transition: all 0.3s ease; 
+            font-weight: 600;
+            color: #1e293b;
+        }
+        .input-field:focus { 
+            outline: none; 
+            border-color: #3b82f6; 
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); 
+            background-color: #ffffff; 
+        }
+        .input-readonly {
+            background-color: #f1f5f9;
+            color: #1e3a8a;
+            font-weight: bold;
+            cursor: not-allowed;
+        }
+        
+        /* عناوين الأقسام */
+        .section-title { 
+            position: relative; 
+            padding-right: 1.25rem; 
+            color: #0f172a; 
+            font-weight: 800; 
+            font-size: 1.25rem; 
+            margin-bottom: 1.25rem; 
+        }
+        .section-title::before { 
+            content: ''; 
+            position: absolute; 
+            right: 0; 
+            top: 10%; 
+            bottom: 10%; 
+            width: 6px; 
+            background: linear-gradient(to bottom, #2563eb, #06b6d4); 
+            border-radius: 4px; 
+        }
+        
+        /* ----------------------------------------------------
+           إعدادات الطباعة الدقيقة (لضغط المحتوى في صفحتين)
+        ----------------------------------------------------- */
+        @media print {
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            body { 
+                background-color: white !important; 
+                padding: 0 !important;
+                margin: 0 !important;
+                font-size: 10pt !important; /* تصغير الخط العام لاستيعاب المحتوى */
+            }
+            .no-print { display: none !important; }
+            .glass-panel { 
+                box-shadow: none !important; 
+                border: none !important; 
+                width: 100% !important;
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            /* ضغط المسافات بشكل كبير (الهوامش والحشوات) */
+            .p-10, .md\:p-14, .p-6, .md\:p-10, .p-5, .p-4 { padding: 0.4rem !important; }
+            .space-y-10 > * + * { margin-top: 0.5rem !important; }
+            .space-y-6 > * + * { margin-top: 0.3rem !important; }
+            .mb-10, .mb-6, .mb-5, .mb-4, .mb-3, .mb-2 { margin-bottom: 0.2rem !important; }
+            
+            /* تصغير العناوين للطباعة */
+            h1 { font-size: 16pt !important; margin-bottom: 0.2rem !important; }
+            .section-title { font-size: 12pt !important; margin-bottom: 0.4rem !important; }
+            label { font-size: 9pt !important; margin-bottom: 0.1rem !important; }
+            
+            /* تصغير حجم حقول الإدخال */
+            .input-field {
+                border: 1px solid #cbd5e1 !important;
+                background-color: #ffffff !important;
+                color: #000000 !important;
+                padding: 0.15rem 0.4rem !important;
+                font-size: 9pt !important;
+                border-radius: 0.25rem !important;
+            }
+            textarea.input-field {
+                min-height: 35px !important; /* تقليل ارتفاع الـ Textarea */
+                height: auto !important;
+            }
+            
+            /* فواصل الصفحات الدقيقة - لضمان التقسيم في صفحتين */
+            .page-1 { page-break-after: always !important; }
+            .print-avoid-break { page-break-inside: avoid !important; }
+            
+            /* الحفاظ على الألوان للطباعة */
+            .header-print-fix { background: #0f172a !important; color: white !important; }
+            .bg-blue-50 { background-color: #eff6ff !important; }
+            .bg-emerald-50 { background-color: #ecfdf5 !important; }
+            .bg-rose-50 { background-color: #fff1f2 !important; }
+            .bg-amber-50 { background-color: #fffbeb !important; }
+            .bg-slate-800 { background-color: #1e293b !important; color: white !important;}
+        }
+    </style>
+</head>
+<body class="p-2 sm:p-4 md:p-6">
+
+    <!-- زر الطباعة العائم -->
+    <div class="fixed bottom-6 left-6 z-50 no-print">
+        <button onclick="printAndSaveReport()" class="group flex items-center gap-3 bg-gradient-to-r from-blue-700 to-indigo-700 text-white px-6 py-4 rounded-2xl shadow-2xl hover:shadow-blue-600/40 hover:-translate-y-1 transition-all duration-300 border border-blue-500/30">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+            <span class="font-bold text-lg tracking-wide">طباعة / حفظ كـ PDF (صفحتين)</span>
+        </button>
+    </div>
+
+    <!-- محتوى التقرير -->
+    <div id="report-content" class="max-w-[1050px] mx-auto glass-panel rounded-3xl overflow-hidden mb-20 bg-white">
+        
+        <!-- ======================= الصفحة الأولى (للطباعة) ======================= -->
+        <div class="page-1">
+            <!-- الترويسة (Header) -->
+            <div class="header-print-fix bg-slate-900 p-8 md:p-10 text-white text-center relative overflow-hidden">
+                <div class="relative z-10">
+                    <div class="inline-block px-3 py-0.5 rounded-full bg-white/10 border border-white/20 mb-2">
+                        <span class="text-xs font-bold tracking-wider text-cyan-300">النموذج الإداري الموحد</span>
+                    </div>
+                    <h1 class="text-4xl md:text-5xl font-extrabold mb-2 text-white leading-tight">التقرير الشهري لأداء الصيدلية</h1>
+                    <p class="text-slate-300 text-sm md:text-base max-w-2xl mx-auto font-medium">مراجعة شاملة للمبيعات، المخزون، وفريق العمل</p>
+                </div>
+            </div>
+
+            <div class="p-4 md:p-8 space-y-6">
+                <!-- البيانات الأساسية -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-600 mb-1">اسم الصيدلية / الفرع</label>
+                        <input type="text" id="branch-name" class="input-field font-bold text-blue-900" placeholder="الاسم">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-600 mb-1">عن شهر / سنة</label>
+                        <input type="month" id="report-month" onchange="calculateDailySales()" class="input-field font-bold text-blue-900">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-600 mb-1">تاريخ التقديم</label>
+                        <input type="date" class="input-field font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-slate-600 mb-1">مدير الصيدلية</label>
+                        <!-- اضفنا حدث oninput هنا لتحديث التوقيع في الأسفل -->
+                        <input type="text" id="manager-name-input" oninput="syncManagerName()" class="input-field font-bold" placeholder="الاسم">
+                    </div>
+                </div>
+
+                <!-- 1. الأداء البيعي -->
+                <div class="space-y-4">
+                    <h2 class="section-title">1. الأداء البيعي (Sales Performance)</h2>
+                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                        <div class="bg-blue-50 p-3 rounded-xl border border-blue-200">
+                            <label class="block text-xs font-bold text-blue-900 mb-1">إجمالي المبيعات (بدون جملة)</label>
+                            <div class="relative"><input type="number" id="total-sales" oninput="calculateAll()" class="input-field text-blue-900 font-bold" placeholder="0"><span class="absolute left-3 top-1.5 text-blue-500 font-bold text-xs no-print">ج.م</span></div>
+                        </div>
+                        <div class="bg-white p-3 rounded-xl border border-slate-200">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">متوسط المبيعات اليومية (تلقائي)</label>
+                            <input type="text" id="avg-daily-sales" class="input-field input-readonly" readonly placeholder="0">
+                        </div>
+                        <div class="bg-white p-3 rounded-xl border border-slate-200">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">مبيعات الجملة (إن وجد)</label>
+                            <input type="number" class="input-field" placeholder="0">
+                        </div>
+                        <div class="bg-white p-3 rounded-xl border border-slate-200">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">عدد المعاملات (روشتات)</label>
+                            <input type="number" id="total-transactions" oninput="calculateReceiptAvg()" class="input-field" placeholder="0">
+                        </div>
+                        <div class="bg-white p-3 rounded-xl border border-slate-200">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">متوسط قيمة الريسيت (تلقائي)</label>
+                            <input type="text" id="avg-receipt" class="input-field input-readonly" readonly placeholder="0">
+                        </div>
+                        <div class="bg-white p-3 rounded-xl border border-slate-200">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">العملاء (جدد / حاليين)</label>
+                            <div class="flex gap-2">
+                                <input type="number" class="input-field w-1/2 text-center" placeholder="جدد">
+                                <input type="number" class="input-field w-1/2 text-center" placeholder="إجمالي">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <h3 class="text-sm font-bold text-slate-800 mb-2 border-b border-slate-200 pb-1">تفصيل المبيعات</h3>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <div><label class="block text-[10px] font-bold text-slate-600 mb-1">دواء مباشر+تعاقد</label><input type="number" class="input-field bg-white" placeholder="0"></div>
+                            <div><label class="block text-[10px] font-bold text-slate-600 mb-1">مستحضرات تجميل</label><input type="number" class="input-field bg-white" placeholder="0"></div>
+                            <div><label class="block text-[10px] font-bold text-slate-600 mb-1">أخرى (EP1)</label><input type="number" class="input-field bg-white" placeholder="0"></div>
+                            <div><label class="block text-[10px] font-bold text-slate-600 mb-1">خدمات</label><input type="number" class="input-field bg-white" placeholder="0"></div>
+                            <div><label class="block text-[10px] font-bold text-slate-600 mb-1">الكول سنتر</label><input type="number" class="input-field bg-white" placeholder="0"></div>
+                            <div><label class="block text-[10px] font-bold text-slate-600 mb-1">ابليكشن (الموبايل)</label><input type="number" class="input-field bg-white" placeholder="0"></div>
+                            <div><label class="block text-[10px] font-bold text-slate-600 mb-1">توصيل مجهود ذاتي</label><input type="number" class="input-field bg-white" placeholder="0"></div>
+                            <div><label class="block text-[10px] font-bold text-indigo-700 mb-1">إجمالي التوصيل</label><input type="number" class="input-field border-indigo-300 font-bold text-indigo-900" placeholder="0"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. المخزون -->
+                <div class="space-y-4 print-avoid-break">
+                    <h2 class="section-title">2. إدارة المخزون (Inventory Management)</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div class="bg-white p-3 rounded-xl border border-slate-200"><label class="block text-xs font-bold text-slate-700 mb-1">إجمالي المشتريات</label><input type="number" id="total-purchases" oninput="calculateInventory()" class="input-field" placeholder="0"></div>
+                        <div class="bg-white p-3 rounded-xl border border-slate-200"><label class="block text-xs font-bold text-slate-700 mb-1">مرتجع منتهي الصلاحية</label><input type="number" id="expired-returns" oninput="calculateInventory()" class="input-field text-red-600" placeholder="0"></div>
+                        <div class="bg-slate-800 p-3 rounded-xl border border-slate-900"><label class="block text-xs font-bold text-white mb-1">قيمة المخزون الحالي (تلقائي)</label><input type="text" id="current-inventory" class="input-field font-bold bg-slate-700 text-white border-slate-600" readonly placeholder="0"></div>
+                        
+                        <!-- المقصات -->
+                        <div class="md:col-span-3 bg-slate-100 p-3 rounded-xl border border-slate-200 flex flex-col md:flex-row gap-3 items-center">
+                            <div class="flex items-center w-full md:w-1/4">
+                                <span class="font-bold text-slate-800 text-sm">حركة المقصات:</span>
+                            </div>
+                            <div class="flex-1 w-full"><label class="block text-[10px] font-bold text-slate-600 mb-1">صادر</label><input type="number" class="input-field bg-white" placeholder="0"></div>
+                            <div class="flex-1 w-full"><label class="block text-[10px] font-bold text-slate-600 mb-1">وارد</label><input type="number" class="input-field bg-white" placeholder="0"></div>
+                        </div>
+
+                        <div class="bg-white p-3 rounded-xl border border-slate-200"><label class="block text-xs font-bold text-slate-700 mb-1">مخزون التجميل</label><input type="number" class="input-field" placeholder="0"></div>
+                        <div class="bg-white p-3 rounded-xl border border-slate-200"><label class="block text-xs font-bold text-slate-700 mb-1">مخزون الدواء</label><input type="number" class="input-field" placeholder="0"></div>
+                        <div class="hidden md:block"></div>
+
+                        <!-- تفاصيل المخزون -->
+                        <div class="md:col-span-3 bg-amber-50 p-3 rounded-xl border border-amber-200">
+                            <label class="block text-xs font-bold text-amber-900 mb-2">نقاط متعلقة بالمخزون (مرفق شيت إكسيل):</label>
+                            <div class="grid grid-cols-3 gap-3">
+                                <div><label class="block text-[10px] font-bold text-amber-800 mb-1">قريبة الانتهاء (<6 أشهر)</label><input type="number" class="input-field bg-white border-amber-300" placeholder="0"></div>
+                                <div><label class="block text-[10px] font-bold text-amber-800 mb-1">رواكد</label><input type="number" class="input-field bg-white border-amber-300" placeholder="0"></div>
+                                <div><label class="block text-[10px] font-bold text-amber-800 mb-1">أوفر ستوك</label><input type="number" class="input-field bg-white border-amber-300" placeholder="0"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. فريق العمل -->
+                <div class="space-y-4 print-avoid-break">
+                    <h2 class="section-title">3. تقييم فريق العمل</h2>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200">
+                        <p class="text-xs font-bold text-slate-700 mb-2">طاقم العمل يضم (بالعدد):</p>
+                        <div class="flex flex-wrap gap-2 mb-3">
+                            <div class="flex-1 bg-slate-50 p-2 rounded-lg border border-slate-200 text-center"><label class="block text-[10px] font-bold text-slate-600 mb-1">صيادلة</label><input type="number" class="input-field text-center font-bold" value="0"></div>
+                            <div class="flex-1 bg-slate-50 p-2 rounded-lg border border-slate-200 text-center"><label class="block text-[10px] font-bold text-slate-600 mb-1">مساعدين</label><input type="number" class="input-field text-center font-bold" value="0"></div>
+                            <div class="flex-1 bg-slate-50 p-2 rounded-lg border border-slate-200 text-center"><label class="block text-[10px] font-bold text-slate-600 mb-1">كاشير</label><input type="number" class="input-field text-center font-bold" value="0"></div>
+                            <div class="flex-1 bg-slate-50 p-2 rounded-lg border border-slate-200 text-center"><label class="block text-[10px] font-bold text-slate-600 mb-1">خدمات</label><input type="number" class="input-field text-center font-bold" value="0"></div>
+                            <div class="flex-1 bg-slate-50 p-2 rounded-lg border border-slate-200 text-center"><label class="block text-[10px] font-bold text-slate-600 mb-1">طيارين</label><input type="number" class="input-field text-center font-bold" value="0"></div>
+                        </div>
+                        <div><label class="block text-xs font-bold text-slate-700 mb-1">توزيع الورديات والملاحظات</label><textarea class="input-field min-h-[40px] resize-none"></textarea></div>
+                    </div>
+                </div>
+            </div>
+        </div> <!-- نهاية الصفحة الأولى -->
+
+        <!-- ======================= الصفحة الثانية (للطباعة) ======================= -->
+        <div class="p-4 md:p-8 space-y-6 page-2">
+            
+            <!-- 4 & 5. خدمة العملاء والجرد -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 print-avoid-break">
+                <div class="space-y-3">
+                    <h2 class="section-title">4. الكول سنتر</h2>
+                    <div class="bg-white p-3 rounded-xl border border-slate-200 space-y-2">
+                        <div><label class="block text-xs font-bold text-slate-700 mb-1">الحالة</label><input type="text" class="input-field bg-slate-50"></div>
+                        <div><label class="block text-xs font-bold text-slate-700 mb-1">الملاحظات والاحتياجات</label><textarea class="input-field bg-slate-50 min-h-[40px] resize-none"></textarea></div>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <h2 class="section-title">5. لجنة الجرد</h2>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-300 h-full flex flex-col gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-800 mb-1">إجمالي عجز / زيادة المخزون</label>
+                            <input type="text" class="input-field font-bold text-center border-slate-400" placeholder="+ / - ج.م">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-800 mb-1">إجمالي +/- الدرج (الخزنة)</label>
+                            <input type="text" class="input-field font-bold text-center border-slate-400" placeholder="+ / - ج.م">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. SWOT Analysis -->
+            <div class="space-y-4 print-avoid-break">
+                <h2 class="section-title">6. تحليل (SWOT) الاستراتيجي</h2>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+                        <label class="block text-xs font-bold text-emerald-800 mb-1">نقاط القوة (Strengths)</label>
+                        <textarea class="input-field border-emerald-300 bg-white min-h-[50px] resize-none"></textarea>
+                    </div>
+                    <div class="p-3 bg-rose-50 rounded-xl border border-rose-200">
+                        <label class="block text-xs font-bold text-rose-800 mb-1">نقاط الضعف (Weaknesses)</label>
+                        <textarea class="input-field border-rose-300 bg-white min-h-[50px] resize-none"></textarea>
+                    </div>
+                    <div class="p-3 bg-blue-50 rounded-xl border border-blue-200">
+                        <label class="block text-xs font-bold text-blue-800 mb-1">الفرص (Opportunities)</label>
+                        <textarea class="input-field border-blue-300 bg-white min-h-[50px] resize-none"></textarea>
+                    </div>
+                    <div class="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                        <label class="block text-xs font-bold text-amber-800 mb-1">التهديدات (Threats)</label>
+                        <textarea class="input-field border-amber-300 bg-white min-h-[50px] resize-none"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 7, 8, 9 الملاحظات -->
+            <div class="space-y-4 print-avoid-break">
+                <h2 class="section-title">7. الملاحظات والتفتيش</h2>
+                <div class="space-y-3">
+                    <div class="bg-white p-3 rounded-xl border border-slate-200">
+                        <label class="block text-xs font-bold text-slate-800 mb-1">7- ملاحظات زيارة الأوديت (Audit):</label>
+                        <textarea class="input-field bg-slate-50 min-h-[40px] resize-none"></textarea>
+                    </div>
+                    
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <label class="block text-xs font-bold text-slate-800 mb-2">8- التفتيش الصيدلي (إن تم):</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="block text-[10px] font-bold text-slate-600 mb-1">سير الإجراءات</label><textarea class="input-field bg-white min-h-[35px] resize-none"></textarea></div>
+                            <div><label class="block text-[10px] font-bold text-slate-600 mb-1">الملاحظات</label><textarea class="input-field bg-white min-h-[35px] resize-none"></textarea></div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-3 rounded-xl border border-slate-200">
+                        <label class="block text-xs font-bold text-slate-800 mb-1">9- ملاحظات عامة:</label>
+                        <textarea class="input-field bg-slate-50 min-h-[50px] resize-none"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- منطقة التوقيع (يتم تحديث الاسم فيها تلقائياً) -->
+            <div class="mt-6 pt-4 border-t-2 border-dashed border-slate-300 flex justify-end print-avoid-break">
+                <div class="text-center w-64 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-800 mb-8">اعتماد مدير الصيدلية</h3>
+                    <div class="border-b-2 border-slate-400 w-full mb-2"></div>
+                    <!-- هذا العنصر يعرض الاسم المكتوب في الأعلى -->
+                    <p id="manager-name-display" class="text-blue-900 text-sm font-bold">الاسم والتوقيع</p>
+                </div>
+            </div>
+
+        </div> <!-- نهاية الصفحة الثانية -->
+    </div>
+
+    <script>
+        // دالة ربط ومزامنة اسم المدير من الأعلى إلى الأسفل (التوقيع)
+        function syncManagerName() {
+            const inputName = document.getElementById('manager-name-input').value.trim();
+            const displayArea = document.getElementById('manager-name-display');
+            
+            if (inputName) {
+                // إذا كتب اسماً، نضيف قبله حرف الدال
+                displayArea.textContent = "د. " + inputName;
+            } else {
+                // إذا مسح الاسم، نعود للنص الافتراضي
+                displayArea.textContent = "الاسم والتوقيع";
+            }
+        }
+
+        // دالة حساب عدد أيام الشهر المختار
+        function getDaysInMonth(year, month) {
+            return new Date(year, month, 0).getDate();
+        }
+
+        // حساب متوسط المبيعات اليومية
+        function calculateDailySales() {
+            const totalSalesInput = document.getElementById('total-sales').value;
+            const monthInput = document.getElementById('report-month').value;
+            const avgDailyInput = document.getElementById('avg-daily-sales');
+
+            if (!totalSalesInput || !monthInput) {
+                avgDailyInput.value = '';
+                return;
+            }
+
+            const [year, month] = monthInput.split('-');
+            const daysCount = getDaysInMonth(parseInt(year), parseInt(month));
+            const totalSales = parseFloat(totalSalesInput) || 0;
+            const dailyAverage = totalSales / daysCount;
+
+            avgDailyInput.value = dailyAverage.toFixed(2);
+        }
+
+        // حساب متوسط قيمة الريسيت
+        function calculateReceiptAvg() {
+            const totalSalesInput = document.getElementById('total-sales').value;
+            const totalTransInput = document.getElementById('total-transactions').value;
+            const avgReceiptInput = document.getElementById('avg-receipt');
+
+            if (!totalSalesInput || !totalTransInput || parseFloat(totalTransInput) === 0) {
+                avgReceiptInput.value = '';
+                return;
+            }
+
+            const totalSales = parseFloat(totalSalesInput) || 0;
+            const totalTrans = parseFloat(totalTransInput) || 0;
+            const receiptAvg = totalSales / totalTrans;
+
+            avgReceiptInput.value = receiptAvg.toFixed(2);
+        }
+
+        // حساب إجمالي قيمة المخزون الحالي
+        function calculateInventory() {
+            const purchasesInput = document.getElementById('total-purchases').value;
+            const returnsInput = document.getElementById('expired-returns').value;
+            const currentInventoryInput = document.getElementById('current-inventory');
+
+            if (!purchasesInput) {
+                currentInventoryInput.value = '';
+                return;
+            }
+
+            const purchases = parseFloat(purchasesInput) || 0;
+            const returns = parseFloat(returnsInput) || 0;
+            const currentInventory = purchases - returns;
+
+            currentInventoryInput.value = currentInventory.toFixed(2);
+        }
+
+        // تشغيل كل الحسابات عند تعديل إجمالي البيع
+        function calculateAll() {
+            calculateDailySales();
+            calculateReceiptAvg();
+        }
+
+        // دالة الطباعة والحفظ كـ PDF الذكية 
+        function printAndSaveReport() {
+            // قراءة اسم الفرع والشهر للتسمية التلقائية للملف
+            const branchInput = document.getElementById('branch-name').value.trim();
+            const monthInput = document.getElementById('report-month').value.trim();
+            
+            const safeBranchName = branchInput ? branchInput.replace(/[^a-zA-Z0-9أ-ي\s-]/g, '').replace(/\s+/g, '_') : 'فرع_غير_محدد';
+            const safeMonthName = monthInput ? monthInput : 'شهر_غير_محدد';
+            
+            const dynamicFileName = `تقرير_صيدلية_${safeBranchName}_${safeMonthName}`;
+
+            // حفظ عنوان الصفحة الأصلي لتغييره مؤقتاً لعملية الـ Save as PDF
+            const originalTitle = document.title;
+            document.title = dynamicFileName;
+
+            // فتح نافذة الطباعة الخاصة بالمتصفح
+            window.print();
+
+            // استعادة عنوان الصفحة الأصلي بعد الطباعة
+            setTimeout(() => {
+                document.title = originalTitle;
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
